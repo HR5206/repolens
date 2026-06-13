@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react"
 import { useRouter } from "next/navigation"
+import type { Metadata } from "next";
 
 const STORAGE_KEY = "repolens_recent";
 

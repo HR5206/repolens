@@ -5,6 +5,39 @@ import { computeLanguageStats, computeActivityStats, computeDailyActivity } from
 import { LanguageBar } from "./LanguageBar";
 import { HeatMap } from "@/components/HeatMap";
 import Link from "next/link";
+import type { Metadata } from "next";
+
+interface PageProps {
+  params: Promise<{ username: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { username } = await params;
+  try {
+    const profile = await getProfile(username);
+    const displayName = profile.name ?? profile.username;
+    return {
+      title: displayName,   
+      description: `${displayName} has ${profile.publicRepos} public repos and ${profile.followers} followers on GitHub.`,
+      openGraph: {
+        title: `${displayName} · RepoLens`,
+        description: `Explore ${displayName}'s GitHub activity, language breakdown, and repositories.`,
+        images: [{ url: profile.avatarUrl, width: 400, height: 400, alt: `${displayName}'s avatar` }],
+      },
+      twitter: {
+        card: "summary",
+        title: `${displayName} · RepoLens`,
+        images: [profile.avatarUrl],
+      },
+    };
+  } catch (err) {
+    if (err instanceof GitHubError && err.status === 404) {
+      return { title: "User not found" };
+    }
+    return { title: username };   
+  }
+}
+
 
 interface PageProps {
     params: Promise<{ username: string}>;
