@@ -38,80 +38,115 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   }
 }
 
-
-interface PageProps {
-    params: Promise<{ username: string}>;
-}
-
-export default async function UserPage({ params } : PageProps) {
+export default async function UserPage({ params }: PageProps) {
     const { username } = await params;
-    let profile: DevProfile, repos : RepoSummary[], events: GitHubEventResponse[];
+    let profile: DevProfile, repos: RepoSummary[], events: GitHubEventResponse[];
+    
     try {
-        [ profile, repos, events]  = await Promise.all([
+        [profile, repos, events] = await Promise.all([
             getProfile(username),
             getRepos(username),
             getEvents(username),
-        ])
+        ]);
     } catch (err) {
-        if (err instanceof GitHubError && err.status ===404) {
+        if (err instanceof GitHubError && err.status === 404) {
             notFound();
         }
         throw err;
     }
+
     const languageStats = computeLanguageStats(repos);
     const activity = computeActivityStats(repos);
     const dailyActivity = computeDailyActivity(events);
-    return (
-        <main className="mx-auto max-w-2xl p-8">
-            <Link href="/" className="text-sm text-gray-500 hover:text-black">← Search</Link>
-            <div className="flex items-center gap-4">
-                <img 
-                    src={profile.avatarUrl}
-                    alt={`${profile.username}'s avatar`}
-                    width={80}
-                    height={80}
-                    className="rounded-full"
-                />
-                <div>
-                    <h1 className="text-2xl font-bold">
-                        {profile.name ?? profile.username}
-                    </h1>
-                    <p className="text-gray-500">@{profile.username}</p>
-                </div>
-            </div>
 
-            <dl className="mt-6 flex gap-8">
-                <div>
-                    <dt className="text-sm text-gray-500">Followers</dt>
-                    <dd className="text-xl font-semibold">{profile.followers}</dd>
-                </div>
-                <div>
-                    <dt className="text-sm text-gray-500">Public repos</dt>
-                    <dd className="text-xl font-semibold">{profile.publicRepos}</dd>
-                </div>
-            </dl>
-            <ul className="mt-8 space-y-2">
-                {repos.map((repo) => (
-                    <li key={repo.name} className="rounded border p-3">
-                        <span className="font-medium">{repo.name}</span>
-                        <span className="ml-3 text-sm text-gray-500">
-                            ⭐ {repo.stars} · {repo.primaryLanguage ?? "—"}
-                        </span>
-                    </li>
-                ))}
-            </ul>
-            <LanguageBar stats={languageStats} />
-            <dl className="mt-6 flex gap-8">
-                <div>
-                    <dt className="text-sm text-gray-500">Active Repos</dt>
-                    <dd className="text-xl font-semibold">{activity.activeCount}</dd>
-                </div>
-                <div>
-                    <dt className="text-sm text-gray-500">Stale Repos</dt>
-                    <dd className="text-xl font-semibold">{activity.staleCount}</dd>
-                </div>
-            </dl>
-            <HeatMap days={dailyActivity} />
+    return (
+        <main className="min-h-screen bg-black text-white font-sans selection:bg-white selection:text-black pb-16">
+            <div className="mx-auto max-w-3xl p-8">
+                {/* Navigation */}
+                <Link 
+                    href="/" 
+                    className="inline-block mb-10 text-xs font-mono uppercase tracking-widest text-white/50 hover:text-white transition-colors"
+                >
+                    ← Search 
+                </Link>
+                <header className="flex items-center gap-6 border-b border-white/30 pb-8">
+                    <img 
+                        src={profile.avatarUrl}
+                        alt={`${profile.username}'s avatar`}
+                        width={80}
+                        height={80}
+                        className="rounded-full border-2 border-white" // Grayscale REMOVED
+                    />
+                    <div>
+                        <h1 className="text-3xl sm:text-4xl font-mono uppercase tracking-tighter">
+                            {profile.name ?? profile.username}
+                        </h1>
+                        <p className="text-white/50 font-mono text-sm tracking-widest mt-1">
+                            @{profile.username}
+                        </p>
+                    </div>
+                </header>
+
+                <dl className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-4">
+                    {[
+                        { label: "Followers", value: profile.followers },
+                        { label: "Public Repos", value: profile.publicRepos },
+                        { label: "Active", value: activity.activeCount },
+                        { label: "Stale", value: activity.staleCount },
+                    ].map((stat) => (
+                        <div key={stat.label} className="border border-white/30 p-4 flex flex-col justify-between bg-black">
+                            <dt className="text-[10px] sm:text-xs font-mono uppercase tracking-widest text-white/60 mb-3">
+                                {stat.label}
+                            </dt>
+                            <dd className="text-3xl font-mono">{stat.value}</dd>
+                        </div>
+                    ))}
+                </dl>
+
+                <section className="mt-12">
+                    <h2 className="text-xl font-mono uppercase tracking-tighter mb-4 border-b border-white pb-2">
+                        Repositories
+                    </h2>
+                    <ul className="space-y-4">
+                        {repos.map((repo) => (
+                            <li 
+                                key={repo.name} 
+                                className="group border border-white/50 p-4 hover:bg-white hover:text-black transition-all duration-200 cursor-pointer"
+                            >
+                                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                    <span className="font-mono text-lg font-bold uppercase truncate group-hover:text-black">
+                                        {repo.name}
+                                    </span>
+                                    <span className="text-xs font-mono text-white/60 group-hover:text-black/80 flex gap-3">
+                                        <span>★ {repo.stars}</span>
+                                        {repo.primaryLanguage && (
+                                            <span> {repo.primaryLanguage.toUpperCase()}</span>
+                                        )}
+                                    </span>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                </section>
+
+                <section className="mt-12 border border-white/50 p-6">
+                    <h2 className="text-lg font-mono uppercase tracking-tighter mb-6 text-white/80">
+                        Language Stats
+                    </h2>
+                    <div>
+                        <LanguageBar stats={languageStats} />
+                    </div>
+                </section>
+
+                <section className="mt-8 border border-white/50 p-6">
+                    <h2 className="text-lg font-mono uppercase tracking-tighter mb-6 text-white/80">
+                        Activity Matrix
+                    </h2>
+                    <div>
+                        <HeatMap days={dailyActivity} />
+                    </div>
+                </section>
+            </div>
         </main>
     );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import type { Metadata } from "next";
+import Image from "next/image"
 
 const STORAGE_KEY = "repolens_recent";
 
@@ -17,7 +17,7 @@ export default function HomePage() {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored) setRecent(JSON.parse(stored) as string[]);
     } catch {
-      
+      // Ignore local storage errors silently
     }
   }, []);
 
@@ -38,33 +38,52 @@ export default function HomePage() {
   }
 
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
-      <h1 className="mb-2 text-4xl font-bold tracking-tight">RepoLens</h1>
-      <p className="mb-8 text-gray-500">Explore any GitHub developer profile</p>
+    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-black text-white selection:bg-white selection:text-black font-sans">
+      
+      <div className="mb-10 flex flex-col items-center">
+        <div className="relative h-32 w-32 overflow-hidden rounded-full border-2 border-white bg-black mb-6">
+          <Image 
+            src="/cowboy-cat.jpg" 
+            alt="RepoLens Logo"
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+        
+        <h1 className="text-4xl sm:text-6xl font-mono uppercase tracking-tighter">
+          RepoLens
+        </h1>
+        <p className="mt-2 text-xs sm:text-sm font-mono uppercase tracking-widest text-white/50">
+          Explore any GitHub profile
+        </p>
+      </div>
 
-      <div className="w-full max-w-md">
-        <div className="flex gap-2">
+      <div className="w-full max-w-lg">
+        <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row w-full group">
           <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="GitHub username"
+            placeholder="ENTER USERNAME..."
             disabled={isPending}
-            className="flex-1 rounded border px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-black disabled:opacity-50"
+            className="flex-1 rounded-none border border-white bg-transparent p-4 font-mono text-lg text-white placeholder:text-white/30 focus:bg-white focus:text-black focus:outline-none transition-all disabled:opacity-50"
           />
           <button
-            onClick={handleSubmit}
+            type="submit"
             disabled={isPending || query.trim() === ""}
-            className="rounded bg-black px-4 py-2 text-sm text-white disabled:opacity-50"
+            className="mt-2 sm:mt-0 sm:-ml-px rounded-none border border-white bg-black p-4 font-mono text-lg uppercase tracking-widest text-white hover:bg-white hover:text-black transition-all disabled:opacity-50 disabled:hover:bg-black disabled:hover:text-white"
           >
-            {isPending ? "Loading…" : "Search"}
+            {isPending ? " ... " : " SEARCH "}
           </button>
-        </div>
+        </form>
 
         {recent.length > 0 && (
-          <div className="mt-4">
-            <p className="mb-2 text-xs text-gray-400">Recent</p>
-            <div className="flex flex-wrap gap-2">
+          <div className="mt-12 border-t border-white/30 pt-6">
+            <p className="mb-4 text-[10px] font-mono uppercase tracking-widest text-white/50">
+              Recent Logs
+            </p>
+            <div className="flex flex-wrap gap-3">
               {recent.map((u) => (
                 <button
                   key={u}
@@ -72,7 +91,7 @@ export default function HomePage() {
                     setQuery(u);
                     startTransition(() => router.push(`/u/${encodeURIComponent(u)}`));
                   }}
-                  className="rounded-full border px-3 py-1 text-xs text-gray-600 hover:border-black hover:text-black"
+                  className="rounded-none border border-white/30 bg-transparent px-4 py-2 font-mono text-xs uppercase tracking-wider text-white/70 hover:border-white hover:bg-white hover:text-black transition-colors"
                 >
                   {u}
                 </button>
