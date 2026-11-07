@@ -24,9 +24,10 @@ export class GitHubError extends Error {
 async function ghFetch<T>(path: string): Promise<T> {
     const res = await fetch(`${BASE}${path}`, {
         headers: { Accept: "application/vnd.github+json",
-            Authorization: `Bearer ${process.env.GITHUB_TOKEN}`,
+            ...(process.env.GITHUB_TOKEN ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` } : {}),
         },
         next: { revalidate: 300},
+        signal: AbortSignal.timeout(10_000),
     });
     if (!res.ok) {
         throw new GitHubError(res.status, path);
@@ -57,9 +58,15 @@ interface GitHubRepoResponse {
 }
 
 export async function getRepos(username: string): Promise<RepoSummary[]> {
-    const raw = await ghFetch<GitHubRepoResponse[]>(
-        `/users/${encodeURIComponent(username)}/repos?per_page=100&sort=pushed`,
-    );
+    const raw: GitHubRepoResponse[] = [];
+    for (let page = 1; ; page++) {
+        if (page > 50) throw new Error("This profile exceeds the 5,000 repository limit.");
+        const batch = await ghFetch<GitHubRepoResponse[]>(
+            `/users/${encodeURIComponent(username)}/repos?per_page=100&sort=pushed&page=${page}`,
+        );
+        raw.push(...batch);
+        if (batch.length < 100) break;
+    }
     return raw
         .filter((r) => !r.fork)
         .map((r) => ({
@@ -80,7 +87,7 @@ export async function getEvents(username: string): Promise<GitHubEventResponse[]
     const pages = await Promise.all(
         [1, 2, 3].map((page) => 
             ghFetch<GitHubEventResponse[]>(
-                `/users/${encodeURIComponent(username)}/events/public?page_page=100&page=${page}`,
+                `/users/${encodeURIComponent(username)}/events/public?per_page=100&page=${page}`,
             ),
         ),
     );
