@@ -5,6 +5,7 @@ import { computeLanguageStats, computeActivityStats, computeDailyActivity } from
 import { LanguageBar } from "./LanguageBar";
 import { HeatMap } from "@/components/HeatMap";
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 
 interface PageProps {
@@ -17,7 +18,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     const profile = await getProfile(username);
     const displayName = profile.name ?? profile.username;
     return {
-      title: displayName,   
+      title: displayName,
       description: `${displayName} has ${profile.publicRepos} public repos and ${profile.followers} followers on GitHub.`,
       openGraph: {
         title: `${displayName} · RepoLens`,
@@ -34,14 +35,14 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     if (err instanceof GitHubError && err.status === 404) {
       return { title: "User not found" };
     }
-    return { title: username };   
+    return { title: username };
   }
 }
 
 export default async function UserPage({ params }: PageProps) {
     const { username } = await params;
     let profile: DevProfile, repos: RepoSummary[], events: GitHubEventResponse[];
-    
+
     try {
         [profile, repos, events] = await Promise.all([
             getProfile(username),
@@ -63,14 +64,14 @@ export default async function UserPage({ params }: PageProps) {
         <main className="min-h-screen bg-black text-white font-sans selection:bg-white selection:text-black pb-16">
             <div className="mx-auto max-w-3xl p-8">
                 {/* Navigation */}
-                <Link 
-                    href="/" 
+                <Link
+                    href="/"
                     className="inline-block mb-10 text-xs font-mono uppercase tracking-widest text-white/50 hover:text-white transition-colors"
                 >
-                    ← Search 
+                    ← Search
                 </Link>
                 <header className="flex items-center gap-6 border-b border-white/30 pb-8">
-                    <img 
+                    <Image unoptimized
                         src={profile.avatarUrl}
                         alt={`${profile.username}'s avatar`}
                         width={80}
@@ -103,20 +104,21 @@ export default async function UserPage({ params }: PageProps) {
                     ))}
                 </dl>
 
+                <p className="mt-4 text-sm text-white/60">Active means pushed within 90 days. Active/stale and language statistics exclude forks; the public repository count includes them.</p>
                 <section className="mt-12">
                     <h2 className="text-xl font-mono uppercase tracking-tighter mb-4 border-b border-white pb-2">
                         Repositories
                     </h2>
                     <ul className="space-y-4">
                         {repos.map((repo) => (
-                            <li 
-                                key={repo.name} 
+                            <li
+                                key={repo.name}
                                 className="group border border-white/50 p-4 hover:bg-white hover:text-black transition-all duration-200 cursor-pointer"
                             >
                                 <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
-                                    <span className="font-mono text-lg font-bold uppercase truncate group-hover:text-black">
+                                    <a href={`https://github.com/${encodeURIComponent(profile.username)}/${encodeURIComponent(repo.name)}`} className="font-mono text-lg font-bold uppercase truncate group-hover:text-black underline focus-visible:outline">
                                         {repo.name}
-                                    </span>
+                                    </a>
                                     <span className="text-xs font-mono text-white/60 group-hover:text-black/80 flex gap-3">
                                         <span>★ {repo.stars}</span>
                                         {repo.primaryLanguage && (
@@ -131,7 +133,7 @@ export default async function UserPage({ params }: PageProps) {
 
                 <section className="mt-12 border border-white/50 p-6">
                     <h2 className="text-lg font-mono uppercase tracking-tighter mb-6 text-white/80">
-                        Language Stats
+                        Primary languages by repository count
                     </h2>
                     <div>
                         <LanguageBar stats={languageStats} />
@@ -140,9 +142,10 @@ export default async function UserPage({ params }: PageProps) {
 
                 <section className="mt-8 border border-white/50 p-6">
                     <h2 className="text-lg font-mono uppercase tracking-tighter mb-6 text-white/80">
-                        Activity Matrix
+                        Recent public events
                     </h2>
                     <div>
+                        <p className="mb-4 text-sm text-white/60">Up to 300 recent public events from GitHub, shown by UTC date. This is not the contributions graph; empty cells can mean events are outside the returned history.</p>
                         <HeatMap days={dailyActivity} />
                     </div>
                 </section>

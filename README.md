@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# RepoLens
 
-## Getting Started
+I built RepoLens to turn a GitHub username into a compact view of public repositories, primary languages, and recent activity. It uses Next.js server rendering and GitHub's REST API. The interface keeps the existing black-and-white style.
 
-First, run the development server:
+## Run locally
 
-```bash
+Use Node 24 LTS and npm:
+
+```sh
+npm ci
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open the address printed by Next.js and search for a username. `GITHUB_TOKEN` is optional for local use; without it, GitHub's unauthenticated rate limit applies. For a public deployment, configure a minimally scoped token as a **server-side** environment variable. Never prefix it with `NEXT_PUBLIC_` or commit its value.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```sh
+npm run verify
+npm run typecheck
+npm audit
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## What the numbers mean
 
-## Learn More
+- Public repository count comes from the profile and includes forks. Repository rows, language counts, and active/stale counts exclude forks.
+- Active means a push within 90 days. This is recency, not a measure of code quality or developer productivity.
+- Languages are counted by each repository's primary language, not source lines or language bytes.
+- The activity view shows up to 300 recent public events on a 91-day UTC grid. It is not GitHub's contributions graph. Empty cells do not prove inactivity.
 
-To learn more about Next.js, take a look at the following resources:
+Repository requests paginate in batches of 100, with an explicit 5,000-repository limit. Fetches have a ten-second timeout and a five-minute Next.js cache interval. The repository names link back to GitHub. Local recent searches tolerate unavailable or malformed browser storage.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Code map
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+`src/lib/github.ts` handles API access; `stats.ts` contains pure aggregation functions. `src/app/u/[username]/page.tsx` renders the profile. Tests cover aggregation and mocked API contracts, including token omission, pagination, error statuses, and event page size.
 
-## Deploy on Vercel
+## Deployment
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+The previously listed Vercel URL returned HTTP 404 during this audit. Reconnect this repository to Vercel with the Next.js preset, Node 24, `npm ci`, and `npm run build`. Add `GITHUB_TOKEN` in the project's environment settings, redeploy, and verify a real username, an unknown username, repository links, and the empty-state behavior before placing the new URL in GitHub About.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This app needs a Next.js server; static export is not appropriate for arbitrary usernames. Check the hosting provider's current usage limits before enabling a public deployment. Local tests mock GitHub; they do not prove a deployed token or external API is available.

@@ -1,30 +1,36 @@
 "use client"
 
-import { useState, useEffect, useTransition } from "react"
+import { useState, useSyncExternalStore, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import Image from "next/image"
 
 const STORAGE_KEY = "repolens_recent";
 
+function readRecent() {
+  try {
+    const value: unknown = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    return JSON.stringify(Array.isArray(value) ? value.filter(v => typeof v === "string").slice(0, 5) : []);
+  } catch { return "[]"; }
+}
+function subscribeRecent(update: () => void) {
+  window.addEventListener("storage", update);
+  window.addEventListener("repolens-recent", update);
+  return () => { window.removeEventListener("storage", update); window.removeEventListener("repolens-recent", update); };
+}
+
 export default function HomePage() {
   const [query, setQuery] = useState("");
-  const [recent, setRecent] = useState<string[]>([]);
+  const recentJson = useSyncExternalStore(subscribeRecent, readRecent, () => "[]");
+  const recent: string[] = JSON.parse(recentJson);
   const [isPending, startTransition] = useTransition();
   const router = useRouter();
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) setRecent(JSON.parse(stored) as string[]);
-    } catch {
-      // Ignore local storage errors silently
-    }
-  }, []);
-
   function saveRecent(username: string) {
     const updated = [username, ...recent.filter((u) => u !== username)].slice(0, 5);
-    setRecent(updated);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(updated)); }
+    catch { /* Browsing still works when storage is disabled. */ }
+    window.dispatchEvent(new Event("repolens-recent"));
   }
 
   function handleSubmit(e: React.FormEvent) {
